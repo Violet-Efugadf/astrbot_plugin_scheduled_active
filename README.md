@@ -1,253 +1,176 @@
 # astrbot_plugin_scheduled_active
-astrbot定时启用插件 - 仅在指定群聊的指定时间段内响应消息，其他时间完全静默，管理员可手动开关
-markdown
-# 📅 astrbot_plugin_scheduled_active
 
-一个让 AstrBot 按时上下班的插件 —— 仅在指定群聊的指定时间段内响应消息，其他时间完全静默，管理员可随时手动开关。
+> 一个为 [AstrBot](https://github.com/Soulter/AstrBot) 打造的 **定时启用 / 静默** 插件，支持自动上下线提示、手动覆盖、私聊豁免、多群管理。
 
----
-
-## ✨ 功能特性
-
-- 🎯 **指定群聊生效**：仅在配置的群号内激活，其他群完全无视
-- ⏰ **定时上下班**：设定每日工作时段，支持跨天时段（如 22:00~06:00）
-- 🔇 **完全静默模式**：非激活时段，任何消息（@、/命令、关键词唤醒、LLM 触发）都不会响应
-- 🛠️ **管理员手动控制**：可随时强制开启 / 关闭 / 恢复自动模式
-- 💬 **私聊白名单**：可选配置允许私聊不受时段限制
-- 📊 **状态查询**：一键查看当前模式、时段、目标群聊等完整信息
-
----
-
-## 📦 安装方法
-
-### 方式一：通过插件市场（推荐）
-
-在 AstrBot WebUI 的「插件市场」中搜索 `scheduled_active` 一键安装。
-
-### 方式二：手动安装
-
-```bash
-cd AstrBot/data/plugins/
-git clone https://github.com/yourname/astrbot_plugin_scheduled_active.git
-然后在 WebUI 中重载插件即可。
-
-目录结构
-text
-astrbot_plugin_scheduled_active/
-├── main.py              # 插件主程序
-├── metadata.yaml        # 插件元数据
-├── _conf_schema.json    # 配置项定义
-├── requirements.txt     # 依赖列表（无额外依赖）
-└── README.md            # 本文档
-⚙️ 配置说明
-进入 AstrBot WebUI → 插件管理 → 找到本插件 → 点击「配置」：
-
-配置项	类型	默认值	说明
-target_groups	list	[]	目标群聊ID列表（必填），仅这些群内会响应
-start_time	string	09:00	每日激活开始时间（24小时制 HH:MM）
-end_time	string	22:00	每日激活结束时间（24小时制 HH:MM）
-allow_private	bool	false	是否允许私聊响应（不受时段和群聊限制）
-admin_ids	list	[]	管理员QQ号列表（兼容老版本，新版自动识别）
-配置示例（普通时段）
-json
-{
-    "target_groups": [123456789, 987654321],
-    "start_time": "09:00",
-    "end_time": "22:00",
-    "allow_private": false
-}
-跨天时段示例（夜间工作）
-json
-{
-    "start_time": "22:00",
-    "end_time": "06:00"
-}
-💡 插件会自动识别跨天时段，无需额外配置。
-
-🎮 管理员命令
-以下命令任何时段均可使用（即使在静默期），且仅限管理员触发。
-
-命令	功能描述
-/active_on	🟢 强制开启机器人（覆盖定时规则）
-/active_off	🔴 强制关闭机器人（覆盖定时规则）
-/active_auto	🔄 恢复自动定时模式
-/active_status	📊 查看当前状态详情
-使用示例
-查看状态：
-
-text
-/active_status
-返回示例：
-
-text
-📊 机器人状态
-━━━━━━━━━━━━
-当前模式：自动定时模式
-当前状态：✅ 激活
-当前时间：14:30:25
-激活时段：09:00 ~ 22:00 ✅
-目标群聊：2 个
-群聊列表：123456789, 987654321
-临时加班：
-
-text
-/active_on
-返回：✅ 已手动开启机器人（覆盖定时规则）
-
-临时请假：
-
-text
-/active_off
-返回：🔇 已手动关闭机器人（覆盖定时规则）
-
-恢复正常排班：
-
-text
-/active_auto
-返回：🔄 已恢复定时模式，当前状态：激活
-
-🧠 工作原理
-本插件利用 AstrBot 的事件钩子机制，在消息流入的最前端设置一个高优先级的「守门员」：
-
-text
-消息进入
-    ↓
-[守门员检查 priority=99]
-    ↓
-├─ 是管理员开关命令？ → 放行
-├─ 是目标群聊吗？     → 否 → 🔇 拦截
-├─ 在激活时段吗？     → 否 → 🔇 拦截
-└─ 全部通过           → ✅ 放行给其他插件 / LLM
-通过 event.stop_event() 终止事件传播，确保非激活状态下没有任何插件会被触发，实现真正的静默。
-
-📋 常见问题 FAQ
-Q1: 为什么管理员命令在静默期也能用？
-守门员会优先识别管理员命令并放行，确保你能随时控制机器人。
-
-Q2: 我想让机器人 24 小时全天工作，但只在指定群？
-设置 start_time: "00:00" 和 end_time: "23:59" 即可。
-
-Q3: 私聊会被静默吗？
-默认会。如需开启私聊，将 allow_private 设为 true。
-
-Q4: 手动开关会持久化吗？
-不会。重启 AstrBot 后会自动恢复到「自动定时模式」。
-
-Q5: 静默期间机器人能收到消息吗？
-能收到，但不会有任何回应。日志中也不会触发任何插件逻辑。
-
-Q6: 如何获取群号？
-在群内发送任意消息后，查看 AstrBot 控制台日志，或使用其他插件查询 event.get_group_id()。
-
-🛡️ 注意事项
-⚠️ 请确保配置中的 target_groups 群号正确，否则机器人在所有群都会静默
-
-⚠️ 时间格式必须为 HH:MM（如 09:00），错误格式会导致判断失败
-
-⚠️ 本插件优先级为 99，会拦截所有其他插件 —— 这是有意设计，请理解
-
-💡 建议先用 /active_status 确认配置生效后再正式部署
-
-📝 更新日志
-v1.0.0 (2024-XX-XX)
-
-🎉 首次发布
-
-✅ 支持指定群聊 + 指定时段双重过滤
-
-✅ 支持跨天时段配置
-
-✅ 支持管理员手动开关
-
-✅ 提供状态查询命令
-
-🤝 贡献 & 反馈
-🐛 Bug 反馈：Issues
-
-💡 功能建议：欢迎提 PR 或 Issue
-
-⭐ 觉得有用请点个 Star 支持一下！
-
-📄 License
-本项目基于 MIT License 开源。
-
-🙏 致谢
-AstrBot — 优秀的多平台聊天机器人框架
-
-感谢所有使用并反馈问题的用户
-
-text
-但你没有输出纯粹的md文档
-我们注意到用户说“但你没有输出纯粹的md文档”。之前用户要求“整理成一份自述文档，可以更改格式，但我要一份纯粹的自述文档”，然后问“md格式”，我回复了包含```markdown代码块的文本。用户认为这不是“纯粹的md文档”，可能希望直接输出markdown源码而不包裹在代码块中。我需要去掉外层的代码标记，直接输出markdown纯文本。
-
-您说得对，之前输出的是被代码块包裹的 Markdown 内容，不是纯粹的 Markdown 文档。以下是去掉外层代码块后的纯 Markdown 文本，可直接保存为 .md 文件：
-
-markdown
-# 📅 astrbot_plugin_scheduled_active
-
-一个让 AstrBot 按时上下班的插件 —— 仅在指定群聊的指定时间段内响应消息，其他时间完全静默，管理员可随时手动开关。
+[![AstrBot](https://img.shields.io/badge/AstrBot-v4.24%2B-blue)](https://github.com/Soulter/AstrBot)
+[![Version](https://img.shields.io/badge/version-1.4.2-green)](https://github.com/Violet-Efugadf/astrbot_plugin_scheduled_active)
+[![License](https://img.shields.io/badge/license-MIT-lightgrey)](LICENSE)
 
 ---
 
 ## ✨ 功能特性
 
-- 🎯 **指定群聊生效**：仅在配置的群号内激活，其他群完全无视
-- ⏰ **定时上下班**：设定每日工作时段，支持跨天时段（如 22:00~06:00）
-- 🔇 **完全静默模式**：非激活时段，任何消息（@、/命令、关键词唤醒、LLM 触发）都不会响应
-- 🛠️ **管理员手动控制**：可随时强制开启 / 关闭 / 恢复自动模式
-- 💬 **私聊白名单**：可选配置允许私聊不受时段限制
-- 📊 **状态查询**：一键查看当前模式、时段、目标群聊等完整信息
+- 🕘 **定时启用**：在指定时段（如 `09:00 ~ 22:00`）才响应群聊消息，其余时间自动静默
+- 🌅 **上下线提示**：状态切换时自动向目标群发送早安/晚安提示语，营造拟人化体验
+- 🎯 **多群独立管理**：仅对配置中的目标群生效，其他群不受影响
+- 💬 **私聊豁免**：可选择让私聊不受时段限制（方便主人随时调试）
+- 🛠️ **手动覆盖**：管理员可一键强制开启/关闭，或恢复自动定时模式
+- 🚫 **三层拦截**：消息入口、LLM 调用前、消息发送前三重拦截，确保静默期间真正"装睡"
+- 📊 **状态面板**：随时查询当前模式、状态、时段、群组等信息
 
 ---
 
-## 📦 安装方法
+## 📦 安装
 
-### 方式一：通过插件市场（推荐）
+### 方式 1：通过 AstrBot 插件市场（推荐）
 
-在 AstrBot WebUI 的「插件市场」中搜索 `scheduled_active` 一键安装。
+在 AstrBot 管理面板搜索 `scheduled_active` 安装即可。
 
-### 方式二：手动安装
+### 方式 2：手动安装
 
 ```bash
-cd AstrBot/data/plugins/
-git clone [https://github.com/yourname/astrbot_plugin_scheduled_active.git](https://github.com/Violet-Efugadf/astrbot_plugin_scheduled_active)
-然后在 WebUI 中重载插件即可。
+cd /path/to/AstrBot/data/plugins
+git clone https://github.com/Violet-Efugadf/astrbot_plugin_scheduled_active.git
+```
 
-目录结构
-text
-astrbot_plugin_scheduled_active/
-├── main.py              # 插件主程序
-├── metadata.yaml        # 插件元数据
-├── _conf_schema.json    # 配置项定义
-├── requirements.txt     # 依赖列表（无额外依赖）
-└── README.md            # 本文档
-⚙️ 配置说明
-进入 AstrBot WebUI → 插件管理 → 找到本插件 → 点击「配置」：
+然后在 AstrBot 管理面板重载插件。
 
-配置项	类型	默认值	说明
-target_groups	list	[]	目标群聊ID列表（必填），仅这些群内会响应
-start_time	string	09:00	每日激活开始时间（24小时制 HH:MM）
-end_time	string	22:00	每日激活结束时间（24小时制 HH:MM）
-allow_private	bool	false	是否允许私聊响应（不受时段和群聊限制）
-admin_ids	list	[]	管理员QQ号列表（兼容老版本，新版自动识别）
-配置示例（普通时段）
-json
-{
-    "target_groups": [123456789, 987654321],
-    "start_time": "09:00",
-    "end_time": "22:00",
-    "allow_private": false
-}
-跨天时段示例（夜间工作）
-json
-{
-    "start_time": "22:00",
-    "end_time": "06:00"
-}
-💡 插件会自动识别跨天时段，无需额外配置。
+---
 
-🎮 管理员命令
-以下命令任何时段均可使用（即使在静默期），且仅限管理员触发。
+## ⚙️ 配置项
 
-命令	功能描述
-/active_on	🟢 强制开启机器人
+在 AstrBot 管理面板的「插件管理 → astrbot_plugin_scheduled_active → 配置」中设置：
+
+| 配置项 | 类型 | 默认值 | 说明 |
+|--------|------|--------|------|
+| `start_time` | string | `09:00` | 激活起始时间（24h 制，HH:MM） |
+| `end_time` | string | `22:00` | 激活结束时间（支持跨天，如 `22:00`→`06:00`） |
+| `target_groups` | list | `[]` | 生效的群号列表，仅这些群在静默时段会被拦截 |
+| `admin_ids` | list | `[]` | 插件管理员 QQ 号列表（除框架管理员外的额外授权） |
+| `allow_private` | bool | `false` | 是否允许私聊**不受时段限制**永远响应 |
+| `enable_broadcast` | bool | `true` | 是否在状态切换时向目标群广播上下线提示 |
+| `online_message` | string | `🌅 早安~ 机器人已上线，有事请随时呼叫~` | 上线提示语 |
+| `offline_message` | string | `🌙 晚安~ 机器人要去休息了，明天见~` | 下线提示语 |
+| `poll_interval` | int | `60` | 状态轮询间隔（秒），决定上下线提示的精度 |
+
+### 配置示例
+
+```yaml
+start_time: "09:00"
+end_time: "23:30"
+target_groups:
+  - 1104242761
+  - 473420677
+admin_ids:
+  - 1587482788
+allow_private: true
+enable_broadcast: true
+online_message: "🌅 早安呀~ 我醒啦，今天也请多关照！"
+offline_message: "🌙 困死啦，先睡了，有事明天再说~"
+poll_interval: 60
+```
+
+---
+
+## 🎮 命令列表
+
+所有命令仅 **管理员** 可用（框架管理员或 `admin_ids` 中的用户）。
+
+| 命令 | 说明 |
+|------|------|
+| `/active_on` | 强制开启机器人（覆盖定时规则） |
+| `/active_off` | 强制关闭机器人（覆盖定时规则） |
+| `/active_auto` | 恢复自动定时模式 |
+| `/active_status` | 查看当前状态（模式 / 时段 / 群组等） |
+| `/active_help` | 显示命令帮助 |
+
+> 💡 手动开启/关闭后会立即触发上下线提示广播；恢复自动模式时若状态发生变化也会触发。
+
+---
+
+## 🧠 工作原理
+
+插件通过 AstrBot 的三个高优先级钩子拦截消息：
+
+1. **`event_message_type`** —— 入口拦截，阻止后续插件处理
+2. **`on_llm_request`** —— 清空 prompt，阻止 LLM 调用
+3. **`on_decorating_result`** —— 清空回复内容，阻止消息发送
+
+后台同时运行一个轮询任务（默认每 60 秒一次）检测时段变化，触发上下线广播。广播通过 **直接调用 OneBot v11 的 `send_group_msg` API** 实现，绕过封装层确保送达。
+
+### 行为矩阵
+
+| 场景 | 群聊（目标群） | 群聊（非目标群） | 私聊（allow_private=true） | 私聊（allow_private=false） |
+|------|:---:|:---:|:---:|:---:|
+| 激活时段 | ✅ 响应 | ⚪ 不干预* | ✅ 响应 | ❌ 拦截 |
+| 静默时段 | ❌ 拦截 | ⚪ 不干预* | ✅ 响应 | ❌ 拦截 |
+
+> *"不干预"指本插件不处理，由其他插件/框架默认逻辑决定是否响应。
+
+---
+
+## 🐛 常见问题
+
+**Q：上下线提示日志显示成功，但群里收不到？**
+A：请确认使用的是 v1.4.1+ 版本。旧版本通过 `context.send_message` 发送可能因 `unified_msg_origin` 格式问题静默失败，新版改为直接调用 OneBot `send_group_msg`，兼容性更好。
+
+**Q：静默期间私聊也不响应？**
+A：v1.4.2 已修复。请将 `allow_private` 设为 `true`，私聊将永远响应，不受时段限制。
+
+**Q：跨天时段（如 22:00 ~ 06:00）支持吗？**
+A：支持。当 `start_time > end_time` 时自动识别为跨天时段。
+
+**Q：能否对不同群设置不同时段？**
+A：当前版本不支持。如有需求欢迎提 Issue。
+
+---
+
+## 📋 适配说明
+
+- **AstrBot 版本**：v4.24.2+ 已测试通过
+- **平台支持**：当前广播功能仅适配 `aiocqhttp`（OneBot v11，含 NapCat / Lagrange / go-cqhttp 等）
+- **拦截功能**：支持所有平台
+
+---
+
+## 📝 更新日志
+
+### v1.4.2
+- 🐛 修复私聊在静默时段被错误拦截的问题
+- 📊 状态面板新增"私聊响应"展示项
+
+### v1.4.1
+- 🔧 上下线广播改为直接调用 OneBot `send_group_msg` API，解决"日志成功但实际未发送"的问题
+- 📝 新增平台探测日志，便于排查环境问题
+
+### v1.4.0
+- ✨ 新增上下线自动提示广播功能
+- ✨ 新增 `enable_broadcast` / `online_message` / `offline_message` / `poll_interval` 配置项
+- 🛠️ 手动命令切换状态时同步触发广播
+
+### v1.3.0 及以前
+- 基础定时启用/静默功能
+- 三层拦截机制
+- 管理员命令系统
+
+---
+
+## 🤝 贡献
+
+欢迎提交 Issue 与 PR！
+
+- 仓库地址：<https://github.com/Violet-Efugadf/astrbot_plugin_scheduled_active>
+- Bug 反馈：[Issues](https://github.com/Violet-Efugadf/astrbot_plugin_scheduled_active/issues)
+
+---
+
+## 📄 License
+
+[MIT](LICENSE) © Violet-Efugadf
+
+---
+
+## 🙏 致谢
+
+- [AstrBot](https://github.com/Soulter/AstrBot) —— 强大的多平台聊天机器人框架
+- 所有为本插件提供反馈和建议的用户
