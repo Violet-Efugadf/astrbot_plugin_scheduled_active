@@ -210,7 +210,7 @@ markdown
 
 ```bash
 cd AstrBot/data/plugins/
-git clone https://github.com/yourname/astrbot_plugin_scheduled_active.git
+git clone [https://github.com/yourname/astrbot_plugin_scheduled_active.git](https://github.com/Violet-Efugadf/astrbot_plugin_scheduled_active)
 然后在 WebUI 中重载插件即可。
 
 目录结构
