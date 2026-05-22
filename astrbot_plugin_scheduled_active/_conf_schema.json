@@ -1,0 +1,54 @@
+{
+    "target_groups": {
+        "description": "目标群聊ID列表（仅在这些群内的指定时间段响应）",
+        "type": "list",
+        "default": [],
+        "hint": "填写群号，例如 123456789"
+    },
+    "start_time": {
+        "description": "每日激活开始时间（24小时制 HH:MM）",
+        "type": "string",
+        "default": "09:00",
+        "hint": "例如 09:00"
+    },
+    "end_time": {
+        "description": "每日激活结束时间（24小时制 HH:MM，支持跨天如 22:00~06:00）",
+        "type": "string",
+        "default": "22:00",
+        "hint": "例如 22:00"
+    },
+    "allow_private": {
+        "description": "是否允许私聊响应（不受时段和群聊限制）",
+        "type": "bool",
+        "default": false
+    },
+    "admin_ids": {
+        "description": "管理员QQ号列表（兼容老版本，新版自动识别管理员）",
+        "type": "list",
+        "default": []
+    },
+  "enable_broadcast": {
+    "description": "是否启用上下线提示广播",
+    "type": "bool",
+    "default": true,
+    "hint": "在状态切换时（激活↔静默），向所有目标群发送提示消息"
+  },
+  "online_message": {
+    "description": "上线提示内容",
+    "type": "string",
+    "default": "🌅 早安~ 机器人已上线，有事请随时呼叫~",
+    "hint": "从静默切换到激活时发送"
+  },
+  "offline_message": {
+    "description": "下线提示内容",
+    "type": "string",
+    "default": "🌙 晚安~ 机器人要去休息了，明天见~",
+    "hint": "从激活切换到静默时发送"
+  },
+  "poll_interval": {
+    "description": "状态检查间隔（秒）",
+    "type": "int",
+    "default": 60,
+    "hint": "后台轮询的频率，60秒即可"
+  }
+}
