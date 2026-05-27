@@ -9,10 +9,10 @@ from astrbot.api.provider import ProviderRequest
 
 @register(
     "astrbot_plugin_scheduled_active",
-    "YourName",
+    "Violet-Efugadf",
     "定时启用插件（含上下线提示）",
     "1.4.2",
-    "https://github.com/yourname/astrbot_plugin_scheduled_active"
+    "https://github.com/Violet-Efugadf/astrbot_plugin_scheduled_active"
 )
 class ScheduledActivePlugin(Star):
     ADMIN_CMDS = {"active_on", "active_off", "active_auto", "active_status", "active_help"}
